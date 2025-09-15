@@ -5,6 +5,18 @@ import { cookies } from 'next/headers';
 // Server-side timer validation
 export async function POST(request: NextRequest) {
   try {
+    // Return demo response if Supabase not configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { elapsed, duration } = await request.json();
+      return NextResponse.json({
+        status: 'demo',
+        serverTime: Date.now(),
+        elapsed: elapsed || 0,
+        remaining: (duration || 1500) * 1000 - (elapsed || 0),
+        message: 'Demo mode - Supabase not configured'
+      });
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
     const { userId, sessionId, elapsed, clientTime } = await request.json();
 

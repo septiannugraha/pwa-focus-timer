@@ -2,17 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+// Initialize Stripe only if configured
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    })
+  : null;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Initialize Supabase only if configured
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
+  ? createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    )
+  : null;
 
 // Stripe webhook handler for subscription events
 export async function POST(request: NextRequest) {
+  // Return early if Stripe or Supabase not configured
+  if (!stripe || !supabase) {
+    return NextResponse.json(
+      { error: 'Stripe or Supabase not configured' },
+      { status: 503 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get('stripe-signature')!;
 
