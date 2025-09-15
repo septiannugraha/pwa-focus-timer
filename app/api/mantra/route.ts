@@ -4,16 +4,20 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { Redis } from '@upstash/redis';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Initialize OpenAI only if API key exists
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  : null;
 
-// Initialize Redis for caching
-const redis = new Redis({
-  url: process.env.REDIS_URL!,
-  token: process.env.REDIS_TOKEN!,
-});
+// Initialize Redis only if credentials exist
+const redis = process.env.REDIS_URL && process.env.REDIS_TOKEN
+  ? new Redis({
+      url: process.env.REDIS_URL,
+      token: process.env.REDIS_TOKEN,
+    })
+  : null;
 
 // Fallback mantras for when API fails
 const FALLBACK_MANTRAS = [
@@ -45,14 +49,16 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0];
     const cacheKey = `mantra:${userId}:${today}`;
 
-    // Check Redis cache first
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return NextResponse.json({
-        mantra: cached,
-        cached: true,
-        responseTime: Date.now() - startTime
-      });
+    // Check Redis cache first (if Redis is configured)
+    if (redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return NextResponse.json({
+          mantra: cached,
+          cached: true,
+          responseTime: Date.now() - startTime
+        });
+      }
     }
 
     // Get user's preferences for personalization
@@ -65,8 +71,11 @@ export async function GET(request: NextRequest) {
     const focusArea = profile?.focus_area || 'general productivity';
     const motivationStyle = profile?.motivation_style || 'encouraging';
 
-    // Generate mantra with GPT-4
+    // Generate mantra with GPT-4 (if OpenAI is configured)
     try {
+      if (!openai) {
+        throw new Error('OpenAI not configured');
+      }
       const completion = await openai.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
@@ -96,8 +105,10 @@ export async function GET(request: NextRequest) {
       // Validate length
       const finalMantra = mantra.length <= 80 ? mantra : mantra.substring(0, 77) + '...';
 
-      // Cache for 24 hours
-      await redis.set(cacheKey, finalMantra, { ex: 86400 });
+      // Cache for 24 hours (if Redis is configured)
+      if (redis) {
+        await redis.set(cacheKey, finalMantra, { ex: 86400 });
+      }
 
       // Store in database for analytics
       await supabase
@@ -121,8 +132,10 @@ export async function GET(request: NextRequest) {
       // Use fallback mantra
       const fallbackMantra = getFallbackMantra();
 
-      // Still cache the fallback
-      await redis.set(cacheKey, fallbackMantra, { ex: 86400 });
+      // Still cache the fallback (if Redis is configured)
+      if (redis) {
+        await redis.set(cacheKey, fallbackMantra, { ex: 86400 });
+      }
 
       return NextResponse.json({
         mantra: fallbackMantra,
@@ -161,17 +174,29 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0];
     const cacheKey = `quest:${userId}:${today}`;
 
-    // Check cache
-    const cached = await redis.get(cacheKey);
-    if (cached) {
+    // Check cache (if Redis is configured)
+    if (redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return NextResponse.json({
+          quest: cached,
+          cached: true,
+          responseTime: Date.now() - startTime
+        });
+      }
+    }
+
+    // Generate quest with GPT-4 (if OpenAI is configured)
+    if (!openai) {
+      const quest = getDefaultQuest();
       return NextResponse.json({
-        quest: cached,
-        cached: true,
+        quest: quest,
+        cached: false,
+        fallback: true,
         responseTime: Date.now() - startTime
       });
     }
 
-    // Generate quest with GPT-4
     const completion = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
@@ -196,8 +221,10 @@ export async function POST(request: NextRequest) {
 
     const quest = completion.choices[0].message.content?.trim() || getDefaultQuest();
 
-    // Cache for 24 hours
-    await redis.set(cacheKey, quest, { ex: 86400 });
+    // Cache for 24 hours (if Redis is configured)
+    if (redis) {
+      await redis.set(cacheKey, quest, { ex: 86400 });
+    }
 
     // Store in database
     await supabase
