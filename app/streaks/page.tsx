@@ -150,7 +150,7 @@ export default function StreaksPage() {
 
           {/* Calendar View (Simplified) */}
           <div className="mb-8">
-            <h3 className="font-semibold mb-4">This Week's Activity</h3>
+            <h3 className="font-semibold mb-4">This Week&apos;s Activity</h3>
             <div className="grid grid-cols-7 gap-2">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
                 <div key={day} className="text-center">
@@ -179,7 +179,7 @@ export default function StreaksPage() {
                 </div>
                 <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                   All streaks are validated server-side using timestamps from our backend.
-                  Device time changes don't affect your streak!
+                  Device time changes don&apos;t affect your streak!
                 </div>
               </div>
             </div>

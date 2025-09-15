@@ -121,14 +121,14 @@ export default function MantraPage() {
           <div className="mb-8">
             <div className="text-center p-8 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl text-white">
               <div className="text-sm uppercase tracking-wide mb-4 opacity-90">
-                Today's Mantra
+                Today&apos;s Mantra
               </div>
               {isLoading ? (
                 <div className="text-xl animate-pulse">Loading...</div>
               ) : (
                 <>
                   <div className="text-2xl font-semibold leading-relaxed">
-                    "{mantra}"
+                    &quot;{mantra}&quot;
                   </div>
                   <div className="mt-4 text-xs opacity-75">
                     {cached ? '⚡ Cached' : '🤖 AI Generated'} • {responseTime}ms

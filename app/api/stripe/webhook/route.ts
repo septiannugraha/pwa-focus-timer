@@ -88,6 +88,11 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
+  if (!supabase) {
+    console.log('Supabase not configured - skipping subscription update');
+    return;
+  }
+
   const customerId = subscription.customer as string;
   const status = subscription.status;
   const tier = getTierFromPriceId(subscription.items.data[0].price.id);
@@ -148,6 +153,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
+  if (!supabase) {
+    console.log('Supabase not configured - skipping subscription cancellation');
+    return;
+  }
+
   const customerId = subscription.customer as string;
 
   const { data: user } = await supabase
@@ -181,6 +191,11 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
 }
 
 async function handlePaymentSuccess(invoice: Stripe.Invoice) {
+  if (!supabase) {
+    console.log('Supabase not configured - skipping payment success');
+    return;
+  }
+
   const customerId = invoice.customer as string;
 
   const { data: user } = await supabase
@@ -214,6 +229,11 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailure(invoice: Stripe.Invoice) {
+  if (!supabase) {
+    console.log('Supabase not configured - skipping payment failure');
+    return;
+  }
+
   const customerId = invoice.customer as string;
 
   const { data: user } = await supabase
@@ -250,6 +270,11 @@ async function handlePaymentFailure(invoice: Stripe.Invoice) {
 }
 
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
+  if (!supabase) {
+    console.log('Supabase not configured - skipping checkout complete');
+    return;
+  }
+
   const customerId = session.customer as string;
   const userId = session.client_reference_id;
 
@@ -265,11 +290,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 }
 
 function getTierFromPriceId(priceId: string): string {
-  const priceTiers: Record<string, string> = {
-    [process.env.STRIPE_PRICE_BASIC!]: 'basic',
-    [process.env.STRIPE_PRICE_PRO!]: 'pro',
-    [process.env.STRIPE_PRICE_PREMIUM!]: 'premium'
-  };
+  const priceTiers: Record<string, string> = {};
+
+  if (process.env.STRIPE_PRICE_BASIC) {
+    priceTiers[process.env.STRIPE_PRICE_BASIC] = 'basic';
+  }
+  if (process.env.STRIPE_PRICE_PRO) {
+    priceTiers[process.env.STRIPE_PRICE_PRO] = 'pro';
+  }
+  if (process.env.STRIPE_PRICE_PREMIUM) {
+    priceTiers[process.env.STRIPE_PRICE_PREMIUM] = 'premium';
+  }
 
   return priceTiers[priceId] || 'free';
 }
